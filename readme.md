@@ -1,3 +1,7 @@
+# The origional version of this game is at https://github.com/davidmonterocrespo24/esp32s3-arcade-3d
+# I have made some modifications to it...Added a joy stick to row through 4 gears, a turbo button, and some other physics changes.
+
+
 # ESP32 Pseudo-3D Racing Game
 
 An OutRun-style pseudo-3D racing game for the ESP32-S3 microcontroller with an ILI9341 320×240 SPI display. The same source compiles for both ESP32 hardware and Windows (via a Raylib-based emulator).
