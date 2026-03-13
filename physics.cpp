@@ -29,7 +29,7 @@ float lastLapTime    = 0;
 float bestLapTime    = 0;
 float prevPosition   = 0;
 int   currentLap     = 1;
-int   totalLaps      = 3;
+int   totalLaps      = 4;
 
 float velocityX    = 0;
 float acceleration = 0;
@@ -50,6 +50,7 @@ static const float GEAR_RPM_BASE[NUM_GEARS] = {
 float turboCharge   = 0.0f;
 float turboTimeLeft = 0.0f;
 bool  turboActive   = false;
+bool  trackSwitchPending = false;
 
 int  carsPassed = 0;
 bool isSteering = false;
@@ -82,6 +83,8 @@ void initPhysics() {
   carsPassed      = 0;
   isSteering      = false;
   for (int i = 0; i < MAX_CARS; i++) prevRelZ[i] = 0.0f;
+  currentLap     = 1;
+  totalLaps      = 4;
 }
 
 // ── Crash recovery ────────────────────────────────────────────
@@ -94,10 +97,10 @@ void recoverFromCrash() {
 
   currentGear   = 0;
   rpm           = 1000.0f;
-  turboCharge   = 0.0f;
+  //turboCharge   = 0.0f;
   turboActive   = false;
   turboTimeLeft = 0.0f;
-  carsPassed    = 0;
+  //carsPassed    = 0;
   for (int i = 0; i < MAX_CARS; i++) prevRelZ[i] = 0.0f;
 
   invincibleUntil = millis() + 2000;
@@ -281,16 +284,21 @@ void updatePhysics(float dt) {
   prevPosition = position;
   position     = loopIncrease(position, dt * speed, trackLength);
 
-  // Lap detection
-  if (position < prevPosition && prevPosition > trackLength * 0.9f) {
-    if (currentLapTime > 5.0f) {
-      lastLapTime = currentLapTime;
-      if (bestLapTime <= 0.0f || currentLapTime < bestLapTime)
-        bestLapTime = currentLapTime;
-      if (currentLap < totalLaps) currentLap++;
-      else currentLap = 1;
-    }
+// Lap detection
+  if (position < prevPosition && currentLapTime > 2.0f) {
+    lastLapTime = currentLapTime;
+    if (bestLapTime <= 0.0f || currentLapTime < bestLapTime)
+      bestLapTime = currentLapTime;
     currentLapTime = 0;
+
+    if (currentLap < totalLaps) {
+      currentLap++;
+    } else {
+      currentLap         = 1;
+      bestLapTime        = 0.0f;
+      carsPassed         = 0;
+      trackSwitchPending = true;
+    }
   }
   currentLapTime += dt;
 
@@ -320,7 +328,7 @@ int playerSeg = findSegIdx(position);
           && curRelZ <= 0.0f)
       {
         carsPassed++;
-        turboCharge = min(1.0f, (float)carsPassed / 7.5f);
+        turboCharge = min(1.0f, (float)carsPassed / 2.0f);
       }
       prevRelZ[i] = curRelZ;
     }

@@ -42,4 +42,6 @@ void initBackground();
 // Draw a 3D trapezoid (quad) - helper function
 void drawQuad(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, uint16_t c);
 
+void rebuildBackground(int theme);
+
 #endif // RENDERING_H

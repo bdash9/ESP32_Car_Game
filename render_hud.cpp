@@ -394,6 +394,7 @@ void drawHUD(float speed, float maxSpeed,
   if (decimals < 10) spr.print("0");
   spr.print(decimals);
 
+/*
   // Best lap (top right)
   if (bestLapTime > 0.0f && bestLapTime < 999.0f) {
     spr.setCursor(SCR_W - 82, 2);
@@ -404,7 +405,7 @@ void drawHUD(float speed, float maxSpeed,
     spr.print((int)((bestLapTime - (int)bestLapTime) * 10));
     spr.print(" ");
   }
-
+*/
   drawMiniMap();
 
   // Turbo meter (top center)

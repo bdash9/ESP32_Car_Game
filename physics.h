@@ -51,6 +51,8 @@ extern bool  turboActive;    // true while boost is running
 extern int  carsPassed;   // Cars overtaken since last turbo charge
 extern bool isSteering;   // True while left or right button is held
 
+extern bool trackSwitchPending;
+
 // ── Functions ─────────────────────────────────────────────────
 void initPhysics();
 void recoverFromCrash();

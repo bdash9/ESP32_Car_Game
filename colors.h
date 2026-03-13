@@ -32,6 +32,7 @@ uint16_t darkenCol(uint16_t c, float f);
 uint16_t lerpCol(uint16_t c1, uint16_t c2, float t);
 
 // Initialize colors based on time of day
-void initColors(int timeOfDay);
+extern int trackTheme;   // 0 = normal, 1 = ocean
+void initColors(int timeOfDay, int theme = 0);
 
 #endif // COLORS_H

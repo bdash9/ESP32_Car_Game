@@ -17,6 +17,10 @@ extern Segment segments[TOTAL_SEGS];
 extern int segCount;
 extern float trackLength;
 
+
+extern int currentTrack;
+void switchToNextTrack(float maxSpeed);
+
 // ═══════════════════════════════════════════════════════════════
 //  TRACK FUNCTIONS
 // ═══════════════════════════════════════════════════════════════

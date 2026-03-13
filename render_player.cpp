@@ -270,6 +270,102 @@ void drawPlayerCar() {
   renderCar2Mesh(centerX, centerY, rotY, pitch, 6.5f, 130.0f);
 }
 
+void drawTrackTransition(int newTrack, float t) {
+  uint16_t bgTop = (newTrack == 1) ? rgb(  0,  50, 130)
+                 : (newTrack == 2) ? rgb(  5,  60,   5)
+                 :                   rgb( 15,  10,  40);
+  uint16_t bgBot = (newTrack == 1) ? rgb(  0, 120, 220)
+                 : (newTrack == 2) ? rgb( 20, 140,  20)
+                 :                   rgb( 50,  30,  90);
+
+  for (int y = 0; y < SCR_H; y++) {
+    float ft = (float)y / SCR_H;
+    spr.drawFastHLine(0, y, SCR_W, lerpCol(bgTop, bgBot, ft));
+  }
+  for (int y = 0; y < SCR_H; y += 6)
+    spr.drawFastHLine(0, y, SCR_W, darkenCol(bgTop, 0.65f));
+
+  spr.setTextSize(2);
+  spr.setTextColor(TFT_YELLOW);
+  spr.setCursor(SCR_CX - 90, 22);
+  spr.print("TRACK COMPLETE!");
+
+  spr.setTextSize(2);
+  if (newTrack == 1) {
+    spr.setTextColor(rgb(80, 210, 255));
+    spr.setCursor(SCR_CX - 84, 50);
+    spr.print("OCEAN CIRCUIT");
+  } else if (newTrack == 2) {
+    spr.setTextColor(rgb(80, 220, 80));
+    spr.setCursor(SCR_CX - 74, 50);
+    spr.print("GRASS CIRCUIT");
+  } else {
+    spr.setTextColor(rgb(255, 200, 50));
+    spr.setCursor(SCR_CX - 74, 50);
+    spr.print("CITY CIRCUIT");
+  }
+
+  spr.setTextSize(1);
+  spr.setTextColor(TFT_WHITE);
+  spr.setCursor(SCR_CX - 46, 80);
+  spr.print("BEST LAP:  ");
+  if (bestLapTime > 0.0f) {
+    int mins = (int)bestLapTime / 60;
+    int secs = (int)bestLapTime % 60;
+    int decs = (int)((bestLapTime - (int)bestLapTime) * 100);
+    if (mins > 0) { spr.print(mins); spr.print(":"); }
+    spr.print(secs); spr.print(".");
+    if (decs < 10) spr.print("0");
+    spr.print(decs);
+  } else {
+    spr.print("--");
+  }
+
+  // Minimap preview
+  {
+    const int mx = SCR_CX - 44, my = 96, mw = 88, mh = 88;
+    float rangeX = (float)(mapMaxX - mapMinX);
+    float rangeY = (float)(mapMaxY - mapMinY);
+    if (rangeX > 1.0f && rangeY > 1.0f) {
+      const int pad = 5;
+      float sx2 = (float)(mw - pad * 2) / rangeX;
+      float sy2 = (float)(mh - pad * 2) / rangeY;
+      float s   = (sx2 < sy2) ? sx2 : sy2;
+      int drawW = (int)(rangeX * s);
+      int drawH = (int)(rangeY * s);
+      int offX  = mx + pad + (mw - pad * 2 - drawW) / 2;
+      int offY  = my + pad + (mh - pad * 2 - drawH) / 2;
+
+      for (int i = 0; i < TOTAL_SEGS; i++) {
+        int j  = (i + 1) % TOTAL_SEGS;
+        int x1 = offX + (int)((mapPtsX[i] - mapMinX) * s);
+        int y1 = offY + (int)((mapPtsY[i] - mapMinY) * s);
+        int x2 = offX + (int)((mapPtsX[j] - mapMinX) * s);
+        int y2 = offY + (int)((mapPtsY[j] - mapMinY) * s);
+        uint16_t lc = segments[i].tunnel ? rgb(160, 160, 255) : TFT_WHITE;
+        spr.drawLine(x1, y1, x2, y2, lc);
+      }
+
+      int sx0 = offX + (int)((mapPtsX[0] - mapMinX) * s);
+      int sy0 = offY + (int)((mapPtsY[0] - mapMinY) * s);
+      spr.fillCircle(sx0, sy0, 4, TFT_GREEN);
+      spr.drawCircle(sx0, sy0, 4, TFT_WHITE);
+    }
+  }
+
+  if (t > 0.4f) {
+    bool blink = ((int)(t * 5.0f)) % 2 == 0;
+    if (blink) {
+      spr.setTextSize(2);
+      spr.setTextColor(TFT_WHITE);
+      spr.setCursor(SCR_CX - 62, 207);
+      spr.print("GET READY!");
+    }
+  }
+
+  spr.pushSprite(0, 0);
+}
+
 // ---------------------------------------------------------------------------
 // Start screen and crash message 
 // ---------------------------------------------------------------------------

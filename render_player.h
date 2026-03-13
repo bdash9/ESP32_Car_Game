@@ -18,4 +18,6 @@ void drawStartScreen(float time);
 // Draws the crash message
 void drawCrashMessage();
 
+void drawTrackTransition(int newTrack, float t);
+
 #endif // RENDER_PLAYER_H
