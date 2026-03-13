@@ -15,5 +15,6 @@ void drawSpeedometer(float speed, float maxSpeed);
 void drawTachometer(float rpm, int gear);
 void drawHGearPattern(int gear);
 void drawTurboMeter(float charge, bool active);
+void drawMiniMap();
 
 #endif

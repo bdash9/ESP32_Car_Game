@@ -15,6 +15,10 @@ int        segCount = 0;
 float      trackLength;
 TrafficCar trafficCars[MAX_CARS];
 
+int16_t mapPtsX[TOTAL_SEGS];
+int16_t mapPtsY[TOTAL_SEGS];
+int16_t mapMinX = 0, mapMaxX = 0, mapMinY = 0, mapMaxY = 0;
+
 float lastY() {
   return (segCount == 0) ? 0 : segments[(segCount - 1) % TOTAL_SEGS].y;
 }
@@ -51,6 +55,44 @@ void addSprite(int idx, int type, float off) {
   if (idx >= 0 && idx < segCount) {
     segments[idx].spriteType   = type;
     segments[idx].spriteOffset = off;
+  }
+}
+
+// ── Overhead 2-D minimap path computation ─────────────────────
+// Integrates each segment's curve value into a heading angle,
+// then steps forward by 1 unit per segment. The heading scale
+// 0.00747 is derived so that four addRoad(4,20,4,9) corners
+// each rotate exactly 90°, closing the rectangular circuit.
+static void computeMinimapPoints() {
+  const float HSCALE = 0.00747f;
+  float x = 0.0f, y = 0.0f, hdg = 0.0f;
+  float rawX[TOTAL_SEGS], rawY[TOTAL_SEGS];
+  float mnX =  1e9f, mxX = -1e9f;
+  float mnY =  1e9f, mxY = -1e9f;
+
+  for (int i = 0; i < TOTAL_SEGS; i++) {
+    rawX[i] = x;
+    rawY[i] = y;
+    hdg += segments[i].curve * HSCALE;
+    x   += sinf(hdg);
+    y   -= cosf(hdg);
+    if (x < mnX) mnX = x;
+    if (x > mxX) mxX = x;
+    if (y < mnY) mnY = y;
+    if (y > mxY) mxY = y;
+  }
+
+  float rng = (mxX - mnX > mxY - mnY) ? (mxX - mnX) : (mxY - mnY);
+  float sc  = (rng > 0.001f) ? 28000.0f / rng : 1.0f;
+
+  mapMinX = (int16_t)(mnX * sc);
+  mapMaxX = (int16_t)(mxX * sc);
+  mapMinY = (int16_t)(mnY * sc);
+  mapMaxY = (int16_t)(mxY * sc);
+
+  for (int i = 0; i < TOTAL_SEGS; i++) {
+    mapPtsX[i] = (int16_t)(rawX[i] * sc);
+    mapPtsY[i] = (int16_t)(rawY[i] * sc);
   }
 }
 
@@ -110,7 +152,7 @@ void buildTrack() {
       addRoad(enter, 2, leave, 0.0f, hillY);
     }
   }
-
+/*
 #else
   // Fixed circuit — more straights added between curves
   addRoad(5, 30, 5,  0,     0);   // Long start straight
@@ -126,6 +168,27 @@ void buildTrack() {
   addRoad(5, 25, 5,  0,    5);
   addRoad(8, 12, 8,  5.0, -5);
   addRoad(5, 30, 5,  0,    0);    // Long straight
+#endif
+*/
+#else
+  // Fixed 4-corner rectangular circuit.
+  // Four addRoad(4,20,4, 9.0f, ...) corners each rotate 90° CW.
+  // The chicane (left then right, same magnitude) contributes net 0°.
+  // Total rotation = 4 × 90° = 360° → circuit closes on the minimap.
+  addRoad(0, 18, 0,  0.0f,  0);  // Long start straight      18
+  addRoad(4, 20, 4,  9.0f,  2);  // Right sweeper 90°        28
+  addRoad(0,  8, 0,  0.0f,  2);  // Short uphill              8
+  addRoad(3,  5, 3, -7.0f,  0);  // Chicane — left kink      11
+  addRoad(0,  2, 0,  0.0f,  0);  // Gap                       2
+  addRoad(3,  5, 3,  7.0f,  0);  // Chicane — right kink     11
+  addRoad(0,  8, 0,  0.0f, -2);  // Short downhill            8
+  addRoad(4, 20, 4,  9.0f, -2);  // Right hairpin 90°        28
+  addRoad(0, 18, 0,  0.0f,  0);  // Back straight            18
+  addRoad(4, 20, 4,  9.0f,  2);  // Right sweeper 90°        28
+  addRoad(0,  6, 0,  0.0f,  2);  // Short uphill              6
+  addRoad(4, 20, 4,  9.0f, -2);  // Right final corner 90°   28
+  addRoad(0,  6, 0,  0.0f,  0);  // Approach to start         6
+  // Total: 200 segs exactly
 #endif
 
   while (segCount < TOTAL_SEGS) addSeg(0, 0, false);
@@ -186,7 +249,7 @@ void buildTrack() {
     if      (r2 < 10) addSprite(n, random(0, 3), -1.5f);
     else if (r2 < 20) addSprite(n, random(0, 3),  1.5f);
   }
-
+computeMinimapPoints();
 } // ← end of buildTrack()
 
 // ── Traffic colors (PROGMEM) ──────────────────────────────────

@@ -271,7 +271,7 @@ void drawPlayerCar() {
 }
 
 // ---------------------------------------------------------------------------
-// Start screen and crash message (unchanged)
+// Start screen and crash message 
 // ---------------------------------------------------------------------------
 void drawStartScreen(float time) {
   spr.fillSprite(TFT_BLACK);
@@ -291,10 +291,42 @@ void drawStartScreen(float time) {
 
   spr.setTextSize(1);
   spr.setTextColor(TFT_WHITE);
-  spr.setCursor(30, 170);
-  spr.print("LEFT / RIGHT buttons to steer");
-  spr.setCursor(30, 185);
-  spr.print("Car accelerates automatically");
+  spr.setCursor(5, 163);
+  spr.print("Use left and right buttons to steer");
+  spr.setCursor(5, 176);
+  spr.print("Shift with joystick in an H pattern.");
+  spr.setCursor(5, 189);
+  spr.print("Hit up button for TURBO.");
+
+  // ── H-pattern gear diagram (right side, compact) ───────────
+  {
+    const int16_t bx = 242, by = 158, bw = 75, bh = 48;
+    const int16_t lx = bx + 14;
+    const int16_t rx = bx + bw - 14;
+    const int16_t ty = by + 12;
+    const int16_t gy = by + bh - 12;
+    const int16_t my = (ty + gy) / 2;
+
+    spr.fillRect(bx, by, bw, bh, rgb(20, 20, 20));
+    spr.drawRect(bx, by, bw, bh, rgb(80, 80, 80));
+
+    uint16_t rc = rgb(190, 190, 190);
+    spr.drawFastVLine(lx, ty, gy - ty, rc);
+    spr.drawFastVLine(rx, ty, gy - ty, rc);
+    spr.drawFastHLine(lx, my, rx - lx + 1, rc);
+
+    spr.fillCircle(lx, ty, 3, TFT_WHITE);
+    spr.fillCircle(lx, gy, 3, TFT_WHITE);
+    spr.fillCircle(rx, ty, 3, TFT_WHITE);
+    spr.fillCircle(rx, gy, 3, TFT_WHITE);
+
+    spr.setTextSize(1);
+    spr.setTextColor(TFT_YELLOW);
+    spr.setCursor(lx - 7, by + 3);       spr.print("1");
+    spr.setCursor(lx - 7, by + bh - 10); spr.print("2");
+    spr.setCursor(rx + 3,  by + 3);       spr.print("3");
+    spr.setCursor(rx + 3,  by + bh - 10); spr.print("4");
+  }
 
   spr.fillEllipse(SCR_CX, 95, 55, 18, rgb(15, 15, 15));
   renderCar2Mesh(SCR_CX, 75, time * 1.5f, 0.5f, 5.0f, 130.0f);

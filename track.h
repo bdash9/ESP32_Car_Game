@@ -36,6 +36,11 @@ void addSprite(int idx, int type, float off);
 // Build the complete track
 void buildTrack();
 
+// Minimap overhead path (computed in buildTrack)
+extern int16_t mapPtsX[TOTAL_SEGS];
+extern int16_t mapPtsY[TOTAL_SEGS];
+extern int16_t mapMinX, mapMaxX, mapMinY, mapMaxY;
+
 // ═══════════════════════════════════════════════════════════════
 //  TRAFFIC MANAGEMENT
 // ═══════════════════════════════════════════════════════════════

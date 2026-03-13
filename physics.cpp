@@ -51,6 +51,10 @@ float turboCharge   = 0.0f;
 float turboTimeLeft = 0.0f;
 bool  turboActive   = false;
 
+int  carsPassed = 0;
+bool isSteering = false;
+static float prevRelZ[MAX_CARS]; 
+
 // ── Init ──────────────────────────────────────────────────────
 void initPhysics() {
   float fovRad = FOV_DEG * PI / 180.0f;
@@ -75,6 +79,9 @@ void initPhysics() {
   turboCharge     = 0.0f;
   turboTimeLeft   = 0.0f;
   turboActive     = false;
+  carsPassed      = 0;
+  isSteering      = false;
+  for (int i = 0; i < MAX_CARS; i++) prevRelZ[i] = 0.0f;
 }
 
 // ── Crash recovery ────────────────────────────────────────────
@@ -85,12 +92,13 @@ void recoverFromCrash() {
   playerX      = 0.0f;
   velocityX    = 0.0f;
 
-  // Drop to 1st gear and lose all turbo progress on crash
   currentGear   = 0;
   rpm           = 1000.0f;
   turboCharge   = 0.0f;
   turboActive   = false;
   turboTimeLeft = 0.0f;
+  carsPassed    = 0;
+  for (int i = 0; i < MAX_CARS; i++) prevRelZ[i] = 0.0f;
 
   invincibleUntil = millis() + 2000;
 
@@ -133,29 +141,44 @@ void readGearShift() {
   if (!xLeft && !xRight) { needsNeutral = false; return; }
   if (needsNeutral) return;
   needsNeutral = true;
-
+/*
   if      (xLeft  && yTop) currentGear = 0;  // 1st — upper left
   else if (xLeft  && yBot) currentGear = 1;  // 2nd — lower left
   else if (xRight && yTop) currentGear = 2;  // 3rd — upper right
   else if (xRight && yBot) currentGear = 3;  // 4th — lower right
+*/
+if      (xLeft  && yBot) currentGear = 0;  // 1st — upper left
+  else if (xLeft  && yTop) currentGear = 1;  // 2nd — lower left
+  else if (xRight && yBot) currentGear = 2;  // 3rd — upper right
+  else if (xRight && yTop) currentGear = 3;  // 4th — lower right
 }
 
 // ── Input ─────────────────────────────────────────────────────
 void handleInput(float dt) {
 
-  // Engine acceleration ramp
+  // Gear-dependent acceleration multiplier — 1st gear hits redline quickly
+  static const float GEAR_ACCEL_MULT[NUM_GEARS] = {
+    4.0f,  // 1st: aggressive launch
+    2.0f,  // 2nd: strong
+    1.4f,  // 3rd: moderate
+    1.0f,  // 4th: normal
+  };
+
+  float gearMult    = GEAR_ACCEL_MULT[currentGear];
   float targetAccel = maxSpeed * ACCEL_TARGET;
   if (speed < maxSpeed * ACCEL_NEAR_MAX) {
-    acceleration += ACCEL_RAMP * dt;
+    acceleration += ACCEL_RAMP * gearMult * dt;
     if (acceleration > targetAccel) acceleration = targetAccel;
   } else {
     acceleration *= ACCEL_DAMPING;
   }
   if (acceleration < 0.0f) acceleration = 0.0f;
 
-  // Steering
+  // Steering — also blocks turbo charge while held
   bool leftPressed  = (digitalRead(BTN_LEFT)  == LOW);
   bool rightPressed = (digitalRead(BTN_RIGHT) == LOW);
+  isSteering = leftPressed || rightPressed;
+
   const float STEER_SPEED = 2.5f;
   if (leftPressed)  playerX -= STEER_SPEED * dt;
   if (rightPressed) playerX += STEER_SPEED * dt;
@@ -164,22 +187,18 @@ void handleInput(float dt) {
   // H-pattern gear shift
   readGearShift();
 
-  // ── Turbo button (KEY1) — falling edge only ───────────────────
-  // INPUT_PULLUP: LOW = pressed, HIGH = not pressed.
-  // static bool stores previous state as true=not pressed, false=pressed.
-  // Falling edge = turboPrev was HIGH (not pressed), now LOW (pressed).
-  static bool turboPrev = true;   // true = not pressed
-  bool turboCurr = (digitalRead(BTN_TURBO) == LOW);  // true = pressed
-
+  // Turbo button (falling edge only)
+  static bool turboPrev = true;
+  bool turboCurr = (digitalRead(BTN_TURBO) == LOW);
   if (turboPrev && turboCurr) {
-    // Falling edge: was not pressed, now pressed → activate turbo
     if (turboCharge >= 1.0f && !turboActive) {
       turboActive   = true;
       turboTimeLeft = TURBO_DURATION;
       turboCharge   = 0.0f;
+      carsPassed    = 0;
     }
   }
-  turboPrev = !turboCurr;   // Save inverted: true = not pressed
+  turboPrev = !turboCurr;
 }
 
 // ── Physics update ────────────────────────────────────────────
@@ -223,13 +242,6 @@ void updatePhysics(float dt) {
       speed += (turboTarget - speed) * 6.0f * dt;
       if (speed > turboTarget) speed = turboTarget;
     }
-  }
-
-  // ── Turbo charge build ────────────────────────────────────────
-  // Only builds while driving clean — no crash, no active boost
-  if (!crashed && !turboActive) {
-    turboCharge += dt / TURBO_BUILD_TIME;
-    if (turboCharge > 1.0f) turboCharge = 1.0f;
   }
 
   // Absolute speed cap
@@ -283,7 +295,7 @@ void updatePhysics(float dt) {
   currentLapTime += dt;
 
   // Traffic movement and behaviour
-  int playerSeg = findSegIdx(position);
+int playerSeg = findSegIdx(position);
   for (int i = 0; i < MAX_CARS; i++) {
     TrafficCar& car = trafficCars[i];
 
@@ -292,6 +304,25 @@ void updatePhysics(float dt) {
       if (car.z < 0.0f) car.z += trackLength;
     } else {
       car.z = loopIncrease(car.z, dt * car.speed, trackLength);
+    }
+
+    // ── Overtake detection: charge turbo by passing cars ─────────
+    // Counts only when not steering, not crashed, not already boosting.
+    if (car.type != CAR_ONCOMING) {
+      float curRelZ = car.z - position;
+      if (curRelZ >  trackLength * 0.5f) curRelZ -= trackLength;
+      if (curRelZ < -trackLength * 0.5f) curRelZ += trackLength;
+
+      // Transition from close-ahead to behind = player passed this car
+      if (!crashed && !turboActive && !isSteering
+          && prevRelZ[i] > 0.0f
+          && prevRelZ[i] < (float)(SEG_LEN * 8)
+          && curRelZ <= 0.0f)
+      {
+        carsPassed++;
+        turboCharge = min(1.0f, (float)carsPassed / 7.5f);
+      }
+      prevRelZ[i] = curRelZ;
     }
 
     car.behaviorTimer--;

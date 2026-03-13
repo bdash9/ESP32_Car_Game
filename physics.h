@@ -48,6 +48,9 @@ extern float turboCharge;    // 0.0 (empty) to 1.0 (full)
 extern float turboTimeLeft;  // seconds of boost remaining
 extern bool  turboActive;    // true while boost is running
 
+extern int  carsPassed;   // Cars overtaken since last turbo charge
+extern bool isSteering;   // True while left or right button is held
+
 // ── Functions ─────────────────────────────────────────────────
 void initPhysics();
 void recoverFromCrash();

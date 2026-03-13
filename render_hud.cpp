@@ -9,6 +9,8 @@
 #include "config.h"
 #include "colors.h"
 #include "physics.h"
+#include "track.h"
+#include "utils.h"
 
 // ── H-pattern gear display ────────────────────────────────────
 // [1][3]  top row
@@ -31,7 +33,8 @@ void drawHGearPattern(int gear) {
   spr.drawFastVLine(vcx, SY - 1, totH - 2, rgb(55, 55, 55));
 
   const int gearCol[4] = { 0, 0, 1, 1 };
-  const int gearRow[4] = { 1, 0, 1, 0 };
+//  const int gearRow[4] = { 1, 0, 1, 0 }; //first in bottom left
+  const int gearRow[4] = { 0, 1, 0, 1 };
   for (int g = 0; g < NUM_GEARS; g++) {
     int bx = SX + gearCol[g] * (BW + GX);
     int by = SY + gearRow[g] * (BH + GY);
@@ -302,6 +305,64 @@ const int labelIdx[3]  = {   2,   4,   6 };
   }
 }
 
+// ── Mini-map ──────────────────────────────────────────────────
+// Positioned on the left between the LAP counter (y≤36)
+// and the H-gear pattern / tachometer (y≥170).
+// Box: x=2, y=40, w=80, h=122.
+void drawMiniMap() {
+  const int mx = 2, my = 40, mw = 80, mh = 122;
+
+  float rangeX = (float)(mapMaxX - mapMinX);
+  float rangeY = (float)(mapMaxY - mapMinY);
+  if (rangeX < 1.0f || rangeY < 1.0f) return;
+
+  const int pad = 5;
+  float sx = (float)(mw - pad * 2) / rangeX;
+  float sy = (float)(mh - pad * 2) / rangeY;
+  float s  = (sx < sy) ? sx : sy;
+
+  int drawW = (int)(rangeX * s);
+  int drawH = (int)(rangeY * s);
+  int offX  = mx + pad + (mw - pad * 2 - drawW) / 2;
+  int offY  = my + pad + (mh - pad * 2 - drawH) / 2;
+
+  // Track outline — tunnel sections drawn lighter
+  for (int i = 0; i < TOTAL_SEGS; i++) {
+    int j  = (i + 1) % TOTAL_SEGS;
+    int x1 = offX + (int)((mapPtsX[i] - mapMinX) * s);
+    int y1 = offY + (int)((mapPtsY[i] - mapMinY) * s);
+    int x2 = offX + (int)((mapPtsX[j] - mapMinX) * s);
+    int y2 = offY + (int)((mapPtsY[j] - mapMinY) * s);
+    uint16_t lc = segments[i].tunnel ? rgb(180, 180, 255)
+                                     : TFT_WHITE;
+    spr.drawLine(x1, y1, x2, y2, lc);
+  }
+
+  // Start/finish tick at segment 0
+  {
+    int sx0 = offX + (int)((mapPtsX[0] - mapMinX) * s);
+    int sy0 = offY + (int)((mapPtsY[0] - mapMinY) * s);
+    spr.drawFastHLine(sx0 - 3, sy0, 7, TFT_YELLOW);
+  }
+
+  // Traffic dots
+  for (int i = 0; i < MAX_CARS; i++) {
+    int cs   = findSegIdx(trafficCars[i].z);
+    int cx2  = offX + (int)((mapPtsX[cs] - mapMinX) * s);
+    int cy2  = offY + (int)((mapPtsY[cs] - mapMinY) * s);
+    uint16_t dc = (trafficCars[i].type == CAR_ONCOMING)
+                  ? rgb(255, 140, 0) : rgb(180, 180, 180);
+    spr.fillCircle(cx2, cy2, 1, dc);
+  }
+
+  // Player dot (drawn last, on top)
+  int ps = findSegIdx(position);
+  int px = offX + (int)((mapPtsX[ps] - mapMinX) * s);
+  int py = offY + (int)((mapPtsY[ps] - mapMinY) * s);
+  spr.fillCircle(px, py, 3, TFT_RED);
+  spr.drawCircle(px, py, 3, rgb(255, 120, 120));
+}
+
 // ── Full HUD ──────────────────────────────────────────────────
 void drawHUD(float speed, float maxSpeed,
              float currentLapTime, float bestLapTime) {
@@ -343,6 +404,8 @@ void drawHUD(float speed, float maxSpeed,
     spr.print((int)((bestLapTime - (int)bestLapTime) * 10));
     spr.print(" ");
   }
+
+  drawMiniMap();
 
   // Turbo meter (top center)
   drawTurboMeter(turboCharge, turboActive);

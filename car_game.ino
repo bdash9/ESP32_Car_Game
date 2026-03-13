@@ -155,9 +155,9 @@ void setup() {
   Serial.println(ESP.getFreePsram());
   Serial.println("══════════════════════════════");
 
-  // ── Show start screen with rotating car (3 seconds) ──────────
+  // ── Show start screen with rotating car (6 seconds) ──────────
   unsigned long startTime = millis();
-  while (millis() - startTime < 3000) {
+  while (millis() - startTime < 6000) {
     float animTime = (millis() - startTime) * 0.001f;
     drawStartScreen(animTime);
     delay(16); // ~60 FPS

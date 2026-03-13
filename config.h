@@ -49,7 +49,7 @@
 #define CAM_HEIGHT  1000
 #define FOG_DENSITY 5
 
-#define RANDOM_TRACK 1
+//#define RANDOM_TRACK 1
 
 // ── Car physics ───────────────────────────────────────────────
 #define SPEED_MULTIPLIER   65.0f
