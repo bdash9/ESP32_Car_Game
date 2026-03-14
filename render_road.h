@@ -24,4 +24,6 @@ void drawBuilding(RenderPt& p0, RenderPt& p1, int heightVal, uint16_t baseCol,
 // Draws scenery sprites (trees, bushes, rocks, posts)
 void drawSpriteShape(int type, int sx, int sy, float scale, int16_t clipY, int timeOfDay);
 
+void drawSnowflakes(float dt);
+
 #endif // RENDER_ROAD_H

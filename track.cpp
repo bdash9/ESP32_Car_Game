@@ -62,12 +62,13 @@ void addSprite(int idx, int type, float off) {
 
 // ── Minimap path computation ───────────────────────────────────
 // Per-track HSCALE forces heading to integrate to exactly 2π.
-// Track 0 city:  4 × 90°  corners → HSCALE = 0.00747
-// Track 1 ocean: 3 × 120° corners → HSCALE = 0.00779
-// Track 2 grass: 2 × 180° corners → HSCALE = 0.01442
+// Track 0 city:   4 × 90°  corners → HSCALE = 0.00747
+// Track 1 ocean:  3 × 120° corners → HSCALE = 0.00779
+// Track 2 grass:  2 × 180° corners → HSCALE = 0.01442
+// Track 3 winter: 4×90° CW + 4×90° CCW  → HSCALE = 0.00909
 static void computeMinimapPoints() {
-  const float HSCALE_TABLE[3] = { 0.00747f, 0.00779f, 0.01442f };
-  float HSCALE = HSCALE_TABLE[currentTrack < 3 ? currentTrack : 0];
+  const float HSCALE_TABLE[4] = { 0.00747f, 0.00779f, 0.01442f, 0.00909f };
+  float HSCALE = HSCALE_TABLE[currentTrack < 4 ? currentTrack : 0];
 
   float x = 0.0f, y = 0.0f, hdg = 0.0f;
   float rawX[TOTAL_SEGS], rawY[TOTAL_SEGS];
@@ -102,11 +103,11 @@ static void computeMinimapPoints() {
 
 static uint16_t oceanBuildingColor() {
   switch (random(0, 5)) {
-    case 0: return rgb(235, 228, 215);  // Cream white
-    case 1: return rgb(185, 215, 240);  // Pastel blue
-    case 2: return rgb(248, 218, 175);  // Sandy peach
-    case 3: return rgb(210, 238, 205);  // Mint green
-    default:return rgb(255, 235, 215);  // Warm white
+    case 0: return rgb(235, 228, 215);
+    case 1: return rgb(185, 215, 240);
+    case 2: return rgb(248, 218, 175);
+    case 3: return rgb(210, 238, 205);
+    default:return rgb(255, 235, 215);
   }
 }
 
@@ -167,14 +168,12 @@ void buildTrack() {
 #else
   if (currentTrack == 0) {
     // ── Track 1: rectangular city circuit ─────────────────────
-    // s1=16, s2=28, s3=16, s4=28 → opposite sides equal → closes
     addRoad(0, 16, 0,  0.0f,  0);   // Side 1                  16
     addRoad(4, 20, 4,  9.0f,  2);   // Corner 1 (90° CW)       28
     addRoad(0,  4, 0,  0.0f,  2);   //                           4
     addRoad(3,  5, 3, -7.0f,  0);   // Chicane left             11
     addRoad(0,  2, 0,  0.0f,  0);   // Gap                       2
     addRoad(3,  5, 3,  7.0f,  0);   // Chicane right            11
-    // Side 2 total = 4+11+2+11 = 28 ✓
     addRoad(4, 20, 4,  9.0f, -2);   // Corner 2 (90° CW)       28
     addRoad(0, 16, 0,  0.0f,  0);   // Side 3                  16
     addRoad(4, 20, 4,  9.0f,  2);   // Corner 3 (90° CW)       28
@@ -184,7 +183,6 @@ void buildTrack() {
 
   } else if (currentTrack == 1) {
     // ── Track 2: coastal triangle circuit ─────────────────────
-    // s1=s2=42, s3=41 → nearly equilateral → closes cleanly
     addRoad(0, 42, 0,   0.0f,  0);  // Side 1                  42
     addRoad(5, 15, 5,  14.0f,  3);  // Corner 1 (120°) uphill  25
     addRoad(0, 42, 0,   0.0f, -3);  // Side 2 coastal          42
@@ -193,23 +191,34 @@ void buildTrack() {
     addRoad(5, 15, 5,  14.0f,  0);  // Corner 3 (120°)         25
     // Total: 42+25+42+25+41+25 = 200 ✓
 
-  } else {
-    // Track 3: grass oval — two clean 180° sweepers
-    // Side A = Side B = 70 segs → perfect oval closure on minimap
-    // No chicane — keeps the line drawing clean at minimap scale
-    addRoad(0, 70, 0,  0.0f,  3);  // Side A: start straight, uphill     70
-    addRoad(5, 20, 5,  9.0f, -3);  // Corner 1: 180° right sweep         30
-    addRoad(0, 70, 0,  0.0f,  0);  // Side B: back straight, flat        70
-    addRoad(5, 20, 5,  9.0f,  0);  // Corner 2: 180° right sweep         30
+  } else if (currentTrack == 2) {
+    // ── Track 3: grass oval ────────────────────────────────────
+    addRoad(0, 70, 0,  0.0f,  3);   // Side A uphill           70
+    addRoad(5, 20, 5,  9.0f, -3);   // Corner 1 (180°)         30
+    addRoad(0, 70, 0,  0.0f,  0);   // Side B flat             70
+    addRoad(5, 20, 5,  9.0f,  0);   // Corner 2 (180°)         30
     // Total: 70+30+70+30 = 200 ✓
-    // Corner curve sum = 2 × 217.8 = 435.6 → HSCALE 0.01442 unchanged ✓
+
+  } else {
+    // ── Track 4: winter figure-8 ───────────────────────────────
+    // Right loop (4×90° CW) then left loop (4×90° CCW)
+    addRoad(5, 15, 5,  9.0f,  3);   // R1 (90° right, uphill)  25
+    addRoad(5, 15, 5,  9.0f, -1);   // R2 (90° right)          25
+    addRoad(5, 15, 5,  9.0f, -3);   // R3 (90° right, dnhill)  25
+    addRoad(5, 15, 5,  9.0f,  1);   // R4 (90° right)          25
+    addRoad(5, 15, 5, -9.0f,  0);   // L1 (90° left)           25
+    addRoad(5, 15, 5, -9.0f,  2);   // L2 (90° left, uphill)   25
+    addRoad(5, 15, 5, -9.0f, -2);   // L3 (90° left, dnhill)   25
+    addRoad(5, 15, 5, -9.0f,  0);   // L4 (90° left)           25
+    // Total: 8×25 = 200 ✓
   }
 #endif
 
   while (segCount < TOTAL_SEGS) addSeg(0, 0, false);
   trackLength = (float)TOTAL_SEGS * SEG_LEN;
 
-  // ── Tunnel placement ────────────────────────────────────────
+  // ── Tunnel placement ─────────────────────────────────────────
+  // Tracks 2 and 3 have no tunnel
   if (currentTrack == 0) {
     int tunnelStart = TOTAL_SEGS / 3;
     int tunnelLen   = min(60, TOTAL_SEGS - tunnelStart - 1);
@@ -219,18 +228,16 @@ void buildTrack() {
       segments[i].buildR = 0;
     }
   } else if (currentTrack == 1) {
-    int tunnelStart = 80;
-    int tunnelLen   = 25;
+    int tunnelStart = 80, tunnelLen = 25;
     for (int i = tunnelStart; i < tunnelStart + tunnelLen; i++) {
       segments[i].tunnel = true;
       segments[i].buildL = 0;
       segments[i].buildR = 0;
     }
   }
-  // Track 2 (grass): no tunnel — open fields throughout
 
-  // ── Buildings (city and ocean only) ─────────────────────────
-  if (currentTrack != 2) {
+  // ── Buildings (city and ocean only) ──────────────────────────
+  if (currentTrack != 2 && currentTrack != 3) {
     int buildCounterL = 0, buildCounterR = 0;
     int curBuildL = 0,     curBuildR = 0;
     uint16_t curColL = 0,  curColR = 0;
@@ -274,16 +281,21 @@ void buildTrack() {
 
   // ── Roadside sprites ─────────────────────────────────────────
   if (currentTrack == 2) {
-    // Grass: dense tree lines both sides
+    // Grass: dense trees both sides
     for (int n = 2; n < segCount; n++) {
-      if (segments[n].tunnel) continue;
       int r2 = random(0, 100);
-      if      (r2 < 20) addSprite(n, 0, -1.5f);  // Pine left
-      else if (r2 < 40) addSprite(n, 0,  1.5f);  // Pine right
-      else if (r2 < 46) addSprite(n, 1, -1.8f);  // Round tree left
-      else if (r2 < 52) addSprite(n, 1,  1.8f);  // Round tree right
-      else if (r2 < 54) addSprite(n, 2, -1.6f);  // Bush left
-      else if (r2 < 56) addSprite(n, 2,  1.6f);  // Bush right
+      if      (r2 < 20) addSprite(n, 0, -1.5f);
+      else if (r2 < 40) addSprite(n, 0,  1.5f);
+      else if (r2 < 46) addSprite(n, 1, -1.8f);
+      else if (r2 < 52) addSprite(n, 1,  1.8f);
+      else if (r2 < 54) addSprite(n, 2, -1.6f);
+      else if (r2 < 56) addSprite(n, 2,  1.6f);
+    }
+  } else if (currentTrack == 3) {
+    // Winter: lit Christmas trees alternating sides every 8 segments
+    for (int n = 2; n < segCount; n++) {
+      if      (n % 8 == 0) addSprite(n, 5, -1.5f);
+      else if (n % 8 == 4) addSprite(n, 5,  1.5f);
     }
   } else {
     // City and ocean: sparse sprites in building gaps
@@ -305,10 +317,8 @@ void switchToNextTrack(float maxSpeed) {
   buildTrack();
   initTraffic(maxSpeed);
 
-  // Reset player to 1st gear, clear motion state
   extern int   currentGear;
   extern float rpm;
-  extern float turboCharge;
   extern float turboTimeLeft;
   extern bool  turboActive;
   extern float speed;
@@ -322,7 +332,6 @@ void switchToNextTrack(float maxSpeed) {
   speed         = 0.0f;
   acceleration  = 0.0f;
   velocityX     = 0.0f;
-  // turboCharge preserved — player keeps earned progress
 }
 
 // ── Traffic colors ────────────────────────────────────────────

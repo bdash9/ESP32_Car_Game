@@ -271,11 +271,13 @@ void drawPlayerCar() {
 }
 
 void drawTrackTransition(int newTrack, float t) {
-  uint16_t bgTop = (newTrack == 1) ? rgb(  0,  50, 130)
+uint16_t bgTop = (newTrack == 1) ? rgb(  0,  50, 130)
                  : (newTrack == 2) ? rgb(  5,  60,   5)
+                 : (newTrack == 3) ? rgb( 80,  90, 120)
                  :                   rgb( 15,  10,  40);
   uint16_t bgBot = (newTrack == 1) ? rgb(  0, 120, 220)
                  : (newTrack == 2) ? rgb( 20, 140,  20)
+                 : (newTrack == 3) ? rgb(160, 175, 210)
                  :                   rgb( 50,  30,  90);
 
   for (int y = 0; y < SCR_H; y++) {
@@ -291,7 +293,7 @@ void drawTrackTransition(int newTrack, float t) {
   spr.print("TRACK COMPLETE!");
 
   spr.setTextSize(2);
-  if (newTrack == 1) {
+if (newTrack == 1) {
     spr.setTextColor(rgb(80, 210, 255));
     spr.setCursor(SCR_CX - 84, 50);
     spr.print("OCEAN CIRCUIT");
@@ -299,6 +301,10 @@ void drawTrackTransition(int newTrack, float t) {
     spr.setTextColor(rgb(80, 220, 80));
     spr.setCursor(SCR_CX - 74, 50);
     spr.print("GRASS CIRCUIT");
+  } else if (newTrack == 3) {
+    spr.setTextColor(rgb(200, 220, 255));
+    spr.setCursor(SCR_CX - 84, 50);
+    spr.print("WINTER CIRCUIT");
   } else {
     spr.setTextColor(rgb(255, 200, 50));
     spr.setCursor(SCR_CX - 74, 50);

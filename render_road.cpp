@@ -71,6 +71,101 @@ void drawSpriteShape(int type, int sx, int sy, float scale, int16_t clipY, int t
         spr.fillRect(sx - pw / 2, bottomY - ph, pw, 3, TFT_RED);
       break;
     }
+    case 5: { // Lit Christmas tree
+      int h = (int)(scale * 30000);
+      int w = (int)(scale * 12000);
+      if (h < 4 || w < 3) return;
+      int trunkH = max(2, h / 5);
+      int trunkW = max(1, w / 6);
+      // Trunk
+      spr.fillRect(sx - trunkW/2, bottomY - trunkH,
+                   trunkW, trunkH, rgb(80, 50, 20));
+      // Bottom tier
+      spr.fillTriangle(sx, bottomY - h,
+                       sx - w/2, bottomY - trunkH,
+                       sx + w/2, bottomY - trunkH, rgb(0, 100, 20));
+      // Middle tier
+      int midH = trunkH + (h - trunkH) / 2;
+      spr.fillTriangle(sx, bottomY - h,
+                       sx - w/3, bottomY - midH,
+                       sx + w/3, bottomY - midH, rgb(0, 135, 30));
+      // Top tier
+      spr.fillTriangle(sx, bottomY - h,
+                       sx - w/5, bottomY - h + (h - trunkH)/3,
+                       sx + w/5, bottomY - h + (h - trunkH)/3,
+                       rgb(20, 165, 45));
+      // Star on top
+      if (h > 8) spr.fillCircle(sx, bottomY - h - 1, 2, TFT_YELLOW);
+      // Blinking coloured lights
+      if (h > 10) {
+        bool blink = ((millis() / 500) % 2) == 0;
+        static const uint16_t lc[5] = {
+          0xF800, 0xFFE0, 0x07FF, 0xF81F, 0x07E0
+        };
+        int ry1 = bottomY - trunkH - (h - trunkH) / 3;
+        for (int li = 0; li < 4; li++) {
+          int lx = sx - w/3 + li * (w/5);
+          if (lx >= 0 && lx < SCR_W && ry1 >= 0 && ry1 < SCR_H)
+            spr.drawPixel(lx, ry1, blink ? lc[li] : lc[(li+2)%5]);
+        }
+        int ry2 = bottomY - trunkH - (h - trunkH) / 6;
+        for (int li = 0; li < 5; li++) {
+          int lx = sx - w/2 + li * (w/5);
+          if (lx >= 0 && lx < SCR_W && ry2 >= 0 && ry2 < SCR_H)
+            spr.drawPixel(lx, ry2, blink ? lc[(li+1)%5] : lc[li]);
+        }
+      }
+      break;
+    }
+  }
+}
+
+// ── Snowflake particle system (winter track only) ─────────────
+#define MAX_FLAKES 25
+static struct { float x, y, spd; uint8_t sz; } flakes[MAX_FLAKES];
+static int prevSnowTrack = -1;
+
+void drawSnowflakes(float dt) {
+  if (prevSnowTrack != 3) {
+    for (int i = 0; i < MAX_FLAKES; i++) {
+      flakes[i].x   = (float)random(0, SCR_W);
+      flakes[i].y   = (float)random(0, SCR_H);
+      flakes[i].spd = 18.0f + random(0, 35);
+      flakes[i].sz  = random(0, 3);
+    }
+    prevSnowTrack = 3;
+  }
+
+  for (int i = 0; i < MAX_FLAKES; i++) {
+    flakes[i].y += flakes[i].spd * dt;
+    flakes[i].x += sinf(flakes[i].y * 0.04f) * 0.4f;
+    if (flakes[i].y >= SCR_H) { flakes[i].y = 0; flakes[i].x = random(0, SCR_W); }
+    if (flakes[i].x <  0)      flakes[i].x += SCR_W;
+    if (flakes[i].x >= SCR_W)  flakes[i].x -= SCR_W;
+
+    int px = (int)flakes[i].x;
+    int py = (int)flakes[i].y;
+    if (px < 0 || px >= SCR_W || py < 0 || py >= SCR_H) continue;
+
+    uint16_t col = rgb(240, 245, 255);
+    switch (flakes[i].sz) {
+      case 0:
+        spr.drawPixel(px, py, col);
+        break;
+      case 1:
+        spr.drawPixel(px,   py,   col);
+        spr.drawPixel(px+1, py,   col);
+        spr.drawPixel(px,   py+1, col);
+        spr.drawPixel(px+1, py+1, col);
+        break;
+      default:  // Cross/star shape
+        spr.drawPixel(px,   py,   col);
+        spr.drawPixel(px+1, py,   col);
+        spr.drawPixel(px-1, py,   col);
+        spr.drawPixel(px,   py+1, col);
+        spr.drawPixel(px,   py-1, col);
+        break;
+    }
   }
 }
 

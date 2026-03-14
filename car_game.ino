@@ -15,7 +15,7 @@
 #include "rendering.h"
 #include "physics.h"
 
-int  timeOfDay          = 0;
+int  timeOfDay           = 0;
 long distSinceTimeChange = 0;
 
 void fatalHalt(const char* msg) {
@@ -24,9 +24,7 @@ void fatalHalt(const char* msg) {
   Serial.println(msg);
   Serial.println("System halted. Fix error and reflash.");
   Serial.println("══════════════════════════════");
-  while (true) {
-    delay(500);
-  }
+  while (true) { delay(500); }
 }
 
 void setup() {
@@ -91,7 +89,7 @@ void setup() {
   initColors(timeOfDay);
   Serial.println("      Colors OK");
 
-  Serial.println("[5/7] Initializing background (parallax)...");
+  Serial.println("[5/7] Initializing background...");
   size_t psramBefore = ESP.getFreePsram();
   initBackground();
   size_t psramAfter = ESP.getFreePsram();
@@ -128,12 +126,8 @@ void setup() {
 void loop() {
 
   // ── Handle pending track switch ──────────────────────────────
-// ── Handle pending track switch ──────────────────────────────
   if (trackSwitchPending) {
     trackSwitchPending  = false;
-
-    // Switch track and rebuild everything FIRST
-    // so the transition screen can show the new minimap
     switchToNextTrack(maxSpeed);
     position            = 0.0f;
     prevPosition        = 0.0f;
@@ -143,12 +137,15 @@ void loop() {
     speed               = 0.0f;
     velocityX           = 0.0f;
 
-if (currentTrack == 1) {
+    if (currentTrack == 1) {
       initColors(0, 1);
       rebuildBackground(1);
     } else if (currentTrack == 2) {
       initColors(0, 2);
       rebuildBackground(2);
+    } else if (currentTrack == 3) {
+      initColors(0, 3);
+      rebuildBackground(3);
     } else {
       initColors(0, 0);
       rebuildBackground(0);
@@ -162,7 +159,7 @@ if (currentTrack == 1) {
       delay(16);
     }
 
-    lastFrameMs = millis();   // Reset dt so first frame isn't huge
+    lastFrameMs = millis();
   }
 
   unsigned long now = millis();
@@ -190,6 +187,9 @@ if (currentTrack == 1) {
   drawRoad(position, playerX, playerZdist, cameraDepth, timeOfDay);
   drawPlayerCar();
   drawHUD(speed, maxSpeed, currentLapTime, bestLapTime);
+
+  // ── Snow (winter track only) ──────────────────────────────────
+  if (currentTrack == 3) drawSnowflakes(dt);
 
   // ── Crash overlay ─────────────────────────────────────────────
   if (crashed) {

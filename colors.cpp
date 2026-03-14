@@ -77,6 +77,22 @@ if (theme == 2) {
     colFog     = rgb(160, 220, 160);
     return;
   }
+
+  if (theme == 3) {
+    // Winter track — cold overcast day
+    colSky1    = rgb(190, 200, 215);
+    colSky2    = rgb(160, 172, 192);
+    colSky3    = rgb(130, 142, 168);
+    colGrassL  = rgb(225, 235, 250);  // Snow light
+    colGrassD  = rgb(200, 215, 235);  // Snow shadow
+    colRoadL   = rgb(107, 107, 107);
+    colRoadD   = rgb(105, 105, 105);
+    colRumbleL = TFT_WHITE;
+    colRumbleD = rgb(180,  30,  30);
+    colLane    = rgb(200, 200, 200);
+    colFog     = rgb(210, 218, 230);
+    return;
+  }
   
   switch (timeOfDay) {
     case 0: // Day

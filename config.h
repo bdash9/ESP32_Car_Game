@@ -98,6 +98,6 @@
 #define CAR_BRAKER         4    // Brake-checker:  45-60%, random sudden stops
 
 // Number of Tracks
-#define NUM_TRACKS 3
+#define NUM_TRACKS 4
 
 #endif // CONFIG_H

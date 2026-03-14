@@ -91,6 +91,35 @@ void rebuildBackground(int theme) {
       x += w + random(8, 30);
     }
 
+} else if (theme == 3) {
+    // Winter: pale overcast sky
+    for (int y = 0; y < SCR_CY; y++) {
+      float    t      = (float)y / SCR_CY;
+      uint16_t skyCol = lerpCol(rgb(180, 192, 215), rgb(220, 228, 240), t);
+      bgSpr.drawFastHLine(0, y, SCR_W * 2, skyCol);
+    }
+    // Pale sun barely visible through clouds
+    bgSpr.fillCircle(SCR_W / 2, 22, 14, rgb(230, 235, 245));
+    bgSpr.fillCircle(SCR_W / 2, 22, 10, rgb(248, 250, 255));
+    // Snow-covered rolling hills
+    for (int x = 0; x < SCR_W * 2; x++) {
+      float wave = sinf(x * 0.015f) * 10.0f + sinf(x * 0.006f) * 6.0f;
+      int   h    = (int)(14 + wave);
+      bgSpr.drawFastVLine(x, SCR_CY - h, h, rgb(235, 242, 255));
+    }
+    // Bare winter trees on horizon
+    int x = 0;
+    while (x < SCR_W * 2) {
+      int h = random(10, 26);
+      int w = random(2,  5);
+      bgSpr.fillRect(x, SCR_CY - h, w, h, rgb(70, 65, 60));
+      bgSpr.drawLine(x + w/2, SCR_CY - h,
+                     x + w/2 - 4, SCR_CY - h - 5, rgb(80, 75, 70));
+      bgSpr.drawLine(x + w/2, SCR_CY - h,
+                     x + w/2 + 4, SCR_CY - h - 5, rgb(80, 75, 70));
+      x += w + random(4, 18);
+    }
+    
   } else {
     // ── Default track: city sunset sky ─────────────────────────
     for (int y = 0; y < SCR_CY; y++) {
