@@ -14,15 +14,15 @@
 #include "track.h"
 #include "rendering.h"
 #include "physics.h"
+#include "opponent.h"
 
 int  timeOfDay           = 0;
 long distSinceTimeChange = 0;
 
 void fatalHalt(const char* msg) {
   Serial.println("══════════════════════════════");
-  Serial.print("FATAL ERROR: ");
-  Serial.println(msg);
-  Serial.println("System halted. Fix error and reflash.");
+  Serial.print("FATAL ERROR: "); Serial.println(msg);
+  Serial.println("System halted.");
   Serial.println("══════════════════════════════");
   while (true) { delay(500); }
 }
@@ -39,70 +39,54 @@ void setup() {
   Serial.println("  ESP32 Racing Game Boot");
   Serial.println("══════════════════════════════");
 
-  if (!psramFound()) {
-    fatalHalt("No PSRAM detected! Check board has PSRAM and 'PSRAM: OPI PSRAM' is set in Tools menu.");
-  }
+  if (!psramFound())
+    fatalHalt("No PSRAM detected!");
 
   Serial.print("Total PSRAM: "); Serial.println(ESP.getPsramSize());
   Serial.print("Free PSRAM:  "); Serial.println(ESP.getFreePsram());
-
-  if (ESP.getPsramSize() == 0) {
-    fatalHalt("PSRAM size is 0! Hardware or board config issue.");
-  }
+  if (ESP.getPsramSize() == 0) fatalHalt("PSRAM size is 0!");
 
   pinMode(BTN_LEFT,  INPUT_PULLUP);
   pinMode(BTN_RIGHT, INPUT_PULLUP);
   randomSeed(analogRead(0));
-
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, HIGH);
 
-  Serial.println("[1/7] Initializing display...");
-  tft.begin();
-  tft.setRotation(1);
-  tft.fillScreen(TFT_BLACK);
+  Serial.println("[1/8] Initializing display...");
+  tft.begin(); tft.setRotation(1); tft.fillScreen(TFT_BLACK);
   Serial.println("      Display OK");
 
-  Serial.println("[2/7] Creating sprite (double buffer)...");
-  Serial.print("      Sprite will need ~");
-  Serial.print((SCR_W * SCR_H * 2) / 1024);
-  Serial.println(" KB of PSRAM");
-
+  Serial.println("[2/8] Creating sprite...");
   spr.setColorDepth(16);
   spr.setAttribute(PSRAM_ENABLE, true);
-
   void* sprPtr = spr.createSprite(SCR_W, SCR_H);
-  if (sprPtr == nullptr) {
-    Serial.print("      Free PSRAM at time of failure: ");
-    Serial.println(ESP.getFreePsram());
-    fatalHalt("Sprite creation failed! Not enough PSRAM.");
-  }
+  if (sprPtr == nullptr) fatalHalt("Sprite creation failed!");
   Serial.println("      Sprite OK");
-  Serial.print("      Free PSRAM after sprite: ");
-  Serial.println(ESP.getFreePsram());
 
-  Serial.println("[3/7] Initializing physics...");
+  Serial.println("[3/8] Initializing physics...");
   initPhysics();
   Serial.println("      Physics OK");
 
-  Serial.println("[4/7] Initializing colors...");
+  Serial.println("[4/8] Initializing opponent...");
+  initOpponent();
+  Serial.println("      Opponent OK");
+
+  Serial.println("[5/8] Initializing colors...");
   initColors(timeOfDay);
   Serial.println("      Colors OK");
 
-  Serial.println("[5/7] Initializing background...");
+  Serial.println("[6/8] Initializing background...");
   size_t psramBefore = ESP.getFreePsram();
   initBackground();
-  size_t psramAfter = ESP.getFreePsram();
   Serial.print("      Background used ");
-  Serial.print((psramBefore - psramAfter) / 1024);
-  Serial.println(" KB of PSRAM");
-  Serial.println("      Background OK");
+  Serial.print((psramBefore - ESP.getFreePsram()) / 1024);
+  Serial.println(" KB");
 
-  Serial.println("[6/7] Building track...");
+  Serial.println("[7/8] Building track...");
   buildTrack();
   Serial.println("      Track OK");
 
-  Serial.println("[7/7] Initializing traffic...");
+  Serial.println("[8/8] Initializing traffic...");
   initTraffic(maxSpeed);
   Serial.println("      Traffic OK");
 
@@ -125,10 +109,47 @@ void setup() {
 
 void loop() {
 
+  // ── Game over: show results, wait for button, restart ─────────
+  if (gameOverPending) {
+    gameOverPending = false;
+    unsigned long showStart = millis();
+    while (true) {
+      drawResultsScreen();
+      delay(16);
+      // Require screen shown for at least 3 seconds before accepting input
+      if (millis() - showStart > 3000) {
+        if (digitalRead(BTN_LEFT)  == LOW) break;
+        if (digitalRead(BTN_RIGHT) == LOW) break;
+      }
+    }
+    delay(300);  // Debounce
+
+    // Full reset — back to track 1
+    currentTrack        = 0;
+    timeOfDay           = 0;
+    distSinceTimeChange = 0;
+    initPhysics();
+    initOpponent();
+    buildTrack();
+    initTraffic(maxSpeed);
+    initColors(0, 0);
+    rebuildBackground(0);
+
+    // Show splash screen before restarting
+    unsigned long splashStart = millis();
+    while (millis() - splashStart < 6000) {
+      float animTime = (millis() - splashStart) * 0.001f;
+      drawStartScreen(animTime);
+      delay(16);
+    }
+    lastFrameMs = millis();
+    return;
+  }
+
   // ── Handle pending track switch ──────────────────────────────
   if (trackSwitchPending) {
     trackSwitchPending  = false;
-    switchToNextTrack(maxSpeed);
+    switchToNextTrack(maxSpeed);   // Also calls resetOpponentForNewTrack
     position            = 0.0f;
     prevPosition        = 0.0f;
     currentLapTime      = 0.0f;
@@ -138,17 +159,13 @@ void loop() {
     velocityX           = 0.0f;
 
     if (currentTrack == 1) {
-      initColors(0, 1);
-      rebuildBackground(1);
+      initColors(0, 1); rebuildBackground(1);
     } else if (currentTrack == 2) {
-      initColors(0, 2);
-      rebuildBackground(2);
+      initColors(0, 2); rebuildBackground(2);
     } else if (currentTrack == 3) {
-      initColors(0, 3);
-      rebuildBackground(3);
+      initColors(0, 3); rebuildBackground(3);
     } else {
-      initColors(0, 0);
-      rebuildBackground(0);
+      initColors(0, 0); rebuildBackground(0);
     }
 
     // Transition splash — 4 seconds
@@ -158,18 +175,16 @@ void loop() {
       drawTrackTransition(currentTrack, t);
       delay(16);
     }
-
     lastFrameMs = millis();
   }
 
   unsigned long now = millis();
   float dt = (now - lastFrameMs) / 1000.0f;
   lastFrameMs = now;
-
   if (dt <= 0.0f) dt = 0.001f;
   if (dt >  0.05f) dt = 0.05f;
 
-  // ── Update game if not crashed ────────────────────────────────
+  // ── Update player ─────────────────────────────────────────────
   if (!crashed) {
     handleInput(dt);
     updatePhysics(dt);
@@ -177,32 +192,27 @@ void loop() {
 
     int pSeg = findSegIdx(position + playerZdist);
     if (pSeg >= 0 && pSeg < TOTAL_SEGS) {
-      float curveForce = segments[pSeg].curve;
-      skyOffset += curveForce * (speed / maxSpeed) * 150.0f * dt;
+      skyOffset += segments[pSeg].curve * (speed / maxSpeed) * 150.0f * dt;
     }
   }
 
-  // ── Render frame ─────────────────────────────────────────────
+  // ── Update opponent (always, independent of player crash) ─────
+  updateOpponent(dt);
+
+  // ── Render ───────────────────────────────────────────────────
   drawSky(position, playerZdist, timeOfDay, skyOffset);
   drawRoad(position, playerX, playerZdist, cameraDepth, timeOfDay);
   drawPlayerCar();
   drawHUD(speed, maxSpeed, currentLapTime, bestLapTime);
 
-  // ── Snow (winter track only) ──────────────────────────────────
   if (currentTrack == 3) drawSnowflakes(dt);
 
-  // ── Crash overlay ─────────────────────────────────────────────
   if (crashed) {
     drawCrashMessage();
-    if (millis() - crashTimer > 2000) {
-      recoverFromCrash();
-    }
+    if (millis() - crashTimer > 2000) recoverFromCrash();
   }
 
-  // ── Push frame to display ─────────────────────────────────────
-  if (spr.created()) {
-    spr.pushSprite(0, 0);
-  }
+  if (spr.created()) spr.pushSprite(0, 0);
 
   // ── Time of day cycle (normal theme only) ────────────────────
   if (trackTheme == 0) {

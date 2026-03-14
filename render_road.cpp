@@ -13,6 +13,7 @@
 #include "track.h"
 #include "physics.h"
 #include "render_building.h"
+#include "opponent.h"
 
 // Required external variables
 extern RenderPt rCache[DRAW_DIST];
@@ -454,6 +455,18 @@ void drawRoad(float position, float playerX, float playerZdist,
       if (findSegIdx(trafficCars[c].z) != sIdx) continue;
       int carX = p1.x + (int)(p1.scale * trafficCars[c].offset * ROAD_W * SCR_CX);
       drawTrafficCar(carX, p1.y, p1.scale, trafficCars[c].color, rClip[n]);
+    }
+    
+    // Opponent car (red)
+    if (!opp.crashed) {
+      float relZ = opp.position - position;
+      if (relZ < 0) relZ += trackLength;
+      if (relZ > 0.0f && relZ < (float)(DRAW_DIST * SEG_LEN)) {
+        if (findSegIdx(opp.position) == sIdx) {
+          int carX = p1.x + (int)(p1.scale * opp.x * ROAD_W * SCR_CX);
+          drawTrafficCar(carX, p1.y, p1.scale, rgb(220, 20, 20), rClip[n]);
+        }
+      }
     }
   }
 }

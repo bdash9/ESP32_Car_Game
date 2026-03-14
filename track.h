@@ -9,6 +9,7 @@
 
 #include "structs.h"
 #include "config.h"
+#include "opponent.h"
 
 // ═══════════════════════════════════════════════════════════════
 //  GLOBAL TRACK VARIABLES

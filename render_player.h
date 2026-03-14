@@ -20,4 +20,6 @@ void drawCrashMessage();
 
 void drawTrackTransition(int newTrack, float t);
 
+void drawResultsScreen();
+
 #endif // RENDER_PLAYER_H

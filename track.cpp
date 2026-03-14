@@ -316,6 +316,7 @@ void switchToNextTrack(float maxSpeed) {
   currentTrack = (currentTrack + 1) % NUM_TRACKS;
   buildTrack();
   initTraffic(maxSpeed);
+  resetOpponentForNewTrack();
 
   extern int   currentGear;
   extern float rpm;

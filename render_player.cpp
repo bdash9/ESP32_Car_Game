@@ -14,6 +14,7 @@
 #include "utils.h"
 #include "car2_mesh.h"
 #include "car2_texture.h"
+#include "opponent.h"
 
 // ---------------------------------------------------------------------------
 // Textured triangle rasterizer (affine mapping, scanline)
@@ -367,6 +368,111 @@ if (newTrack == 1) {
       spr.setCursor(SCR_CX - 62, 207);
       spr.print("GET READY!");
     }
+  }
+
+  spr.pushSprite(0, 0);
+}
+
+void drawResultsScreen() {
+  spr.fillSprite(TFT_BLACK);
+
+  // Header
+  spr.setTextSize(2);
+  spr.setTextColor(TFT_YELLOW);
+  spr.setCursor(SCR_CX - 80, 5);
+  spr.print("RACE RESULTS");
+
+  // Column headers
+  spr.setTextSize(1);
+  spr.setTextColor(rgb(140, 140, 140));
+  spr.setCursor(2,   28); spr.print("TRACK");
+  spr.setCursor(74,  28); spr.print("YOU");
+  spr.setCursor(120, 28); spr.print("RIVAL");
+  spr.setCursor(174, 28); spr.print("BEST-U");
+  spr.setCursor(248, 28); spr.print("BEST-R");
+  spr.drawFastHLine(0, 37, SCR_W, rgb(60, 60, 60));
+
+  const char* trackNames[4] = { "CITY", "OCEAN", "GRASS", "WINTER" };
+  int pTotal = 0, oTotal = 0;
+  int y = 42;
+
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    int   pWins = 0, oWins = 0;
+    float pBest = 9999.0f, oBest = 9999.0f;
+
+    for (int l = 0; l < MAX_LAPS_PER_TRACK; l++) {
+      if (raceResults[t][l].winner == 0) pWins++;
+      else if (raceResults[t][l].winner == 1) oWins++;
+      if (raceResults[t][l].playerTime   > 0.1f && raceResults[t][l].playerTime   < pBest) pBest = raceResults[t][l].playerTime;
+      if (raceResults[t][l].opponentTime > 0.1f && raceResults[t][l].opponentTime < oBest) oBest = raceResults[t][l].opponentTime;
+    }
+    pTotal += pWins;
+    oTotal += oWins;
+
+    // Track name
+    spr.setTextColor(rgb(200, 200, 200));
+    spr.setCursor(2, y); spr.print(trackNames[t]);
+
+    // Player laps won
+    spr.setCursor(74, y);
+    spr.setTextColor(pWins > oWins ? TFT_GREEN : (pWins < oWins ? TFT_RED : TFT_YELLOW));
+    spr.print(pWins); spr.print("/4");
+
+    // Rival laps won
+    spr.setCursor(120, y);
+    spr.setTextColor(oWins > pWins ? rgb(255,80,80) : (oWins < pWins ? rgb(100,220,100) : TFT_YELLOW));
+    spr.print(oWins); spr.print("/4");
+
+    // Player best lap
+    spr.setCursor(174, y);
+    spr.setTextColor(TFT_CYAN);
+    if (pBest < 9999.0f) {
+      int ps = (int)pBest; int pd = (int)((pBest - ps) * 100);
+      spr.print(ps); spr.print("."); if (pd < 10) spr.print("0"); spr.print(pd);
+    } else { spr.print("--.-"); }
+
+    // Rival best lap
+    spr.setCursor(248, y);
+    spr.setTextColor(rgb(255, 100, 100));
+    if (oBest < 9999.0f) {
+      int os2 = (int)oBest; int od = (int)((oBest - os2) * 100);
+      spr.print(os2); spr.print("."); if (od < 10) spr.print("0"); spr.print(od);
+    } else { spr.print("--.-"); }
+
+    y += 14;
+  }
+
+  spr.drawFastHLine(0, y + 3, SCR_W, rgb(60, 60, 60));
+  y += 10;
+
+  // Totals
+  spr.setTextSize(1);
+  spr.setCursor(2, y);  spr.setTextColor(TFT_WHITE);   spr.print("LAPS WON:");
+  spr.setCursor(74, y); spr.setTextColor(pTotal > oTotal ? TFT_GREEN : TFT_WHITE);
+  spr.print(pTotal); spr.print("/"); spr.print(NUM_TRACKS * MAX_LAPS_PER_TRACK);
+  spr.setCursor(120, y); spr.setTextColor(oTotal > pTotal ? rgb(255,80,80) : TFT_WHITE);
+  spr.print(oTotal); spr.print("/"); spr.print(NUM_TRACKS * MAX_LAPS_PER_TRACK);
+  y += 18;
+
+  // Winner
+  spr.setTextSize(2);
+  if (pTotal > oTotal) {
+    spr.setTextColor(TFT_GREEN);
+    spr.setCursor(SCR_CX - 64, y); spr.print("YOU WIN!");
+  } else if (oTotal > pTotal) {
+    spr.setTextColor(TFT_RED);
+    spr.setCursor(SCR_CX - 84, y); spr.print("RIVAL WINS!");
+  } else {
+    spr.setTextColor(TFT_YELLOW);
+    spr.setCursor(SCR_CX - 76, y); spr.print("IT'S A TIE!");
+  }
+
+  // Blinking prompt
+  if (((millis() / 500) % 2) == 0) {
+    spr.setTextSize(1);
+    spr.setTextColor(TFT_WHITE);
+    spr.setCursor(SCR_CX - 72, SCR_H - 14);
+    spr.print("Press button to play again");
   }
 
   spr.pushSprite(0, 0);

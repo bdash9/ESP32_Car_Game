@@ -11,6 +11,7 @@
 #include "physics.h"
 #include "track.h"
 #include "utils.h"
+#include "opponent.h"
 
 // ── H-pattern gear display ────────────────────────────────────
 // [1][3]  top row
@@ -355,12 +356,21 @@ void drawMiniMap() {
     spr.fillCircle(cx2, cy2, 1, dc);
   }
 
-  // Player dot (drawn last, on top)
+// Player dot (blue)
   int ps = findSegIdx(position);
   int px = offX + (int)((mapPtsX[ps] - mapMinX) * s);
   int py = offY + (int)((mapPtsY[ps] - mapMinY) * s);
-  spr.fillCircle(px, py, 3, TFT_RED);
-  spr.drawCircle(px, py, 3, rgb(255, 120, 120));
+  spr.fillCircle(px, py, 3, rgb(50,  50, 255));
+  spr.drawCircle(px, py, 3, rgb(150, 150, 255));
+
+// Opponent dot (red)
+  if (!opp.crashed) {
+    int os  = findSegIdx(opp.position);
+    int oxi = offX + (int)((mapPtsX[os] - mapMinX) * s);
+    int oyi = offY + (int)((mapPtsY[os] - mapMinY) * s);
+    spr.fillCircle(oxi, oyi, 2, TFT_RED);
+    spr.drawCircle(oxi, oyi, 2, rgb(255, 120, 120));
+  }
 }
 
 // ── Full HUD ──────────────────────────────────────────────────
@@ -406,6 +416,18 @@ void drawHUD(float speed, float maxSpeed,
     spr.print(" ");
   }
 */
+
+// Race position indicator (top right)
+  {
+    float playerProg = (float)(currentLap - 1) * trackLength + position;
+    float oppProg    = (float)(opp.currentLap - 1) * trackLength + opp.position;
+    int   racePos    = (playerProg >= oppProg) ? 1 : 2;
+    spr.setTextSize(2);
+    spr.setTextColor(racePos == 1 ? TFT_GREEN : TFT_RED);
+    spr.setCursor(SCR_W - 48, 2);
+    spr.print(racePos == 1 ? "1ST" : "2ND");
+  }
+
   drawMiniMap();
 
   // Turbo meter (top center)

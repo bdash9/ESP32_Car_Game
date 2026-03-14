@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "config.h"
 #include <Arduino.h>
+#include "opponent.h"
 
 // ── Global variables ──────────────────────────────────────────
 float cameraDepth;
@@ -289,15 +290,23 @@ void updatePhysics(float dt) {
     lastLapTime = currentLapTime;
     if (bestLapTime <= 0.0f || currentLapTime < bestLapTime)
       bestLapTime = currentLapTime;
+
+    // Record into race results
+    recordPlayerLapTime(currentTrack, currentLap - 1, currentLapTime);
+
     currentLapTime = 0;
 
     if (currentLap < totalLaps) {
       currentLap++;
     } else {
-      currentLap         = 1;
-      bestLapTime        = 0.0f;
-      carsPassed         = 0;
-      trackSwitchPending = true;
+      currentLap  = 1;
+      bestLapTime = 0.0f;
+      carsPassed  = 0;
+      if (currentTrack == NUM_TRACKS - 1) {
+        gameOverPending = true;     // Last track done — show results
+      } else {
+        trackSwitchPending = true;
+      }
     }
   }
   currentLapTime += dt;
@@ -454,5 +463,26 @@ void checkCollisions() {
     turboActive   = false;
     turboTimeLeft = 0.0f;
     turboCharge   = 0.0f;
+  }
+
+  // Opponent car collision
+  if (!opp.crashed && millis() >= invincibleUntil
+                   && millis() >= opp.invincibleUntil) {
+    float oppRelZ = opp.position - position;
+    if (oppRelZ < 0) oppRelZ += trackLength;
+    if (oppRelZ < (float)(SEG_LEN * 4) && speed > maxSpeed * 0.05f) {
+      if (overlapChk(playerX, 0.15f, opp.x, 0.20f)) {
+        float diff = speed - opp.speed;
+        if (diff > maxSpeed * 0.05f) {
+          speed     = opp.speed * 0.75f;
+          velocityX += (playerX < opp.x) ? -0.3f : 0.3f;
+          opp.invincibleUntil = millis() + 1000;
+          if (diff > maxSpeed * 0.5f) {
+            crashed    = true;
+            crashTimer = millis();
+          }
+        }
+      }
+    }
   }
 }
