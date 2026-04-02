@@ -9,13 +9,15 @@
 
 // ── Hardware pins ─────────────────────────────────────────────
 #define TFT_BL    39
-#define BTN_LEFT  17
-#define BTN_RIGHT 16
+#define BTN_LEFT  16
+#define BTN_RIGHT 17
+#define BTN_4    15    // Reserved — wired but not yet assigned a function
 
 // ── Joystick pins — CHANGE THESE TO MATCH YOUR WIRING ─────────
 #define JOYSTICK_X    4    // Analog — left/right axis
 #define JOYSTICK_Y    5    // Analog — forward/back axis
 #define JOYSTICK_Z    7    // Digital — press button (unused, reserved)
+
 
 // ADC thresholds (ESP32 12-bit: 0-4095, center ≈ 2048)
 // Adjust if your joystick center is different

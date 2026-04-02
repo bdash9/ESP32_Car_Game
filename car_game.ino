@@ -1,6 +1,7 @@
 /*
   ═══════════════════════════════════════════════════════════════
   ESP32 Pseudo-3D Racing Game — TFT_eSPI (Double Buffered)
+  Original code: https://github.com/davidmonterocrespo24/esp32s3-arcade-3d?tab=readme-ov-file
   ═══════════════════════════════════════════════════════════════
 */
 
@@ -50,6 +51,7 @@ void setup() {
   pinMode(BTN_RIGHT, INPUT_PULLUP);
   randomSeed(analogRead(0));
   pinMode(TFT_BL, OUTPUT);
+  pinMode(BTN_4, INPUT_PULLUP);   // Reserved button — wired, no function yet
   digitalWrite(TFT_BL, HIGH);
 
   Serial.println("[1/8] Initializing display...");
